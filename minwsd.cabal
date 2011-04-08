@@ -1,0 +1,19 @@
+name:           minwsd
+version:        0.1
+cabal-version:  >= 1.2
+author:         Kevin Charter
+synopsis:       A program that minimizes whitespace differences between two files.
+build-type:     Simple
+tested-with:    GHC == 7.0.2
+
+Executable minwsd
+  Build-Depends:  base >= 4 && < 5,
+                  deepseq >= 1.1.0.2 && < 2,
+                  text >= 0.11.0.5 && < 2,
+                  Diff >= 0.1.2 && < 1
+  Main-Is:        minwsd.hs
+  GHC-Options:    -fwarn-incomplete-patterns
+                  -fwarn-unused-imports
+                  -auto-all -caf-all -rtsopts
+                  -O2
+
