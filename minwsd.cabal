@@ -7,13 +7,14 @@ build-type:     Simple
 tested-with:    GHC == 7.0.2
 
 Executable minwsd
-  Build-Depends:  base >= 4 && < 5,
+  Build-Depends:  array >= 0.3 && < 0.4,
+                  base >= 4 && < 5,
                   deepseq >= 1.1.0.2 && < 2,
                   text >= 0.11.0.5 && < 2,
-                  Diff >= 0.1.2 && < 1
+                  Diff == 0.1.6
   Main-Is:        minwsd.hs
   GHC-Options:    -fwarn-incomplete-patterns
                   -fwarn-unused-imports
-                  -auto-all -caf-all -rtsopts
+                  -- -auto-all -caf-all -rtsopts
                   -O2
 
