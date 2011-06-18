@@ -1,0 +1,441 @@
+May 28, 2011
+============
+
+It's been a while since I've worked on this, but I'd like to make some
+notes about how to make the program better.
+
+At this point, I've got a naive first implementation that parses two
+versions V1 and V2 of a file to 'words', and then uses the Data.Diff
+package on sequences of words to figure out a 'best' set of
+differences. The code then inserts the whitespace and comments from V1
+into the matching locations in the word stream for V2.
+
+Alas, this is far, far too slow for the typical use case: recovering
+the original formatting and comments after producing V2 through a
+program transformation on V1. Since there is typically a comment at
+the top of a file, this means there is a difference right from the
+beginning of the file, so the diff is done on the full sequence of
+words. A source file can easily have tens of thousands of words, and
+the O(n^2) diff algorithm is way, way too slow.
+
+I took a Java source file with 4245 lines, 15288 words, and used Txl
+with it's Java grammar to strip the comments and pretty-print the
+source text to produce a second version of the file. Minwsd took so
+long to attempt to restore the original formatting and comments that I
+had to kill it.
+
+There are a few things I think I can try to do to make this faster:
+
+1. Use more assumptions about the programming language to reduce in
+   the number of words or word mismatches. In particular
+
+   - comments and quoted strings should probably be treated as
+     individual words. In fact, I think comments should either be
+     treated as whitespace or as a third category of input token which
+     is ignored on the first attempt to match the word streams.
+
+   - we should probably also pick out the three different types of
+     braces, and strings of operator characters, and treat them
+     specially. The reason for this is to avoid situations where we
+     parse
+
+       if (int i
+
+     as the seqence of tokens
+
+       "if" "(int" "i"
+
+     but parse
+
+       if(int i
+
+     as the sequence of two tokens
+
+       "if(int" "i"
+
+    This kind of spurious difference can be easily introduced by the
+    pretty-printer in a program transformer.
+
+2. Try a faster heuristic approach for finding long identical strings
+   of tokens, and apply the Data.Diff algorithm only in the areas
+   between the long chunks. That's what the BLAST algorithm for fast
+   sequence alignment does. I've looked at BLAST a bit and it seems
+   really quite complicated -- perhaps I can do well enough with some
+   simpler techniques.
+
+Finding long identical strings
+------------------------------
+
+Suppose that when we parse a source file F, we produce a stream of
+tokens of three different kinds
+
+- a sequence of white space characters
+- a comment
+- a word
+
+The tokens are numbered with consecutive integers starting with 0. If
+'t' is a token, then
+
+ number t
+
+is the number assigned to that token, and
+
+ text t
+
+is the text of the token.
+
+Suppose S1 and S2 are the streams of tokens we obtain by parsing
+versions F1 and F2 of a file. Now, we're typically interested in
+restoring white space and comments to F2; in order to do that, we want
+to figure out where the words in S1 and S2 line up. Once we know that
+word 32 of S1 corresponds to word 47 of S2, we can then inject the
+whitespace and comments that appeared before word 32 in S1 into S2
+just before word 47.
+
+So let W1 be the subsequence of words in S1, and W2 the subsequenc of
+words in S2. We'd like to compute a near-optimal diff of W1 and W2.
+
+In the situation where F2 is just F1 with comments stripped and
+different pretty-printing, assuming we tokenize the input language
+accurately the streams W1 and W2 will be identical, and Data.Diff
+algorithm will be very fast. However, in situations where a
+transformation of the source has happened, this won't be the
+case. Assuming that there are large regions of W1 and W2 that are the
+same, we'd like to quickly find those regions, and then use the diff
+algorithm only in the 'holes' in between.
+
+Now, individual words like "{" or "+" or an identifier "foo" can
+appear in many places in a stream. However, *pairs* of consecutive
+words appear less frequently, and triples of consecutive words even
+less often, and so on. So suppose that we pick some small integer 'k'
+as the minimum length of a substring of words that we'll consider for
+matching between the two streams. Call a substring of 'k' words
+appearing in a stream W a 'k-string'.
+
+For a stream W, it's straightforward to build a map from unique
+k-strings to lists of starting positions. We expect that as 'k'
+increases, the average length of a list of starting positions falls.
+
+For example, suppose W1 is
+
+ A B B A A B A B B B A
+
+The table of 2-strings is
+
+ A B      [0,4,6]
+ B B      [1,7,8]
+ B A      [2,5,9]
+ A A      [3]
+ 
+while the table of 3-strings is
+
+ A B B    [0,6]
+ B B A    [1,8]
+ B A A    [2]
+ A A B    [3]
+ A B A    [4]
+ B A B    [5]
+ B B B    [7]
+ 
+There are more unique 3-strings that 2-strings, and the average number
+of 3-string locations is lower.
+
+Let's suppose that W2 is a slight modification of W1, where we've
+inserted a letter flipped one of the others:
+
+ A A B B A A A A B B B A
+ ^           ^
+ |           was a B in W1
+ |
+ + not in W1
+
+Now, an optimal alignment of W1 and W2 would look like
+
+W1     A B B A A B A B B B A
+W2   A A B B A A A A B B B A
+       _________   _________
+
+I'm being a bit subjective about "optimal" here, but if we define it
+as minimizing the number of differences in corresponding positions,
+this choice certainly looks optimal. The underlined positions are the
+identical substrings in W1 and W2. They are each 5 words long; how
+could we use the table of 2-string positions or the table of 3-string
+positions to rapidly guess the locations of those long strings?
+
+May 29, 2011
+============
+
+We've got these strings of words:
+
+W1     A B B A A B A B B B A
+W2   A A B B A A A A B B B A
+       _________   _________
+
+and the 3-string table for W1 is
+
+ A B B    [0,6]
+ B B A    [1,8]
+ B A A    [2]
+ A A B    [3]
+ A B A    [4]
+ B A B    [5]
+ B B B    [7]
+
+Let's iterate over W2, keeping a list of matching initial positions,
+paired with the length of the match.
+
+We start with A A B. This has one location in W1, so our list of
+potential matching ranges is now
+
+ [((0,3),3)]
+
+that is, the 3-string at position 0 in W2 matchess the 3-string in position 3 in W1.
+
+Advancing to position 1 in W2, the next 3-string is A B B. This gives
+two potential locations in W1
+
+ [((1,0),3), ((1,6),3)]
+
+At this point, we have no really compelling reason to prefer either of
+these matches over the others, nor over the match for position 0, so
+our full list of possibilities is now
+
+ [((1,0),3), ((1,6),3), ((0,3),3)]
+
+Advancing to position 2 in W2, the next 3-string is B B A, which
+yields two matches in W1:
+
+ [((2,1),3), ((2,8),3)]
+
+But there is one important thing to notice: one of the new matches
+*extends* one of the existing ones:
+
+ ((2,1),3)
+
+extends the match
+
+ ((1,0),3)
+
+to a longer match
+
+ ((1,0),4)
+
+Lemma 1: Given a match of the form
+
+ ((n,m), j)
+
+and a new k-string match of the form
+
+ ((n+j-k+1, m+j-k+1), k)
+
+we obtain an extended (j+1)-string match
+
+ ((n,m), j+1)
+
+Distinct existing matches cannot start at the same position. This
+implies that each new k-string match either extends an existing match,
+or starts a new match. If it extends an existing j-string match, we
+aborb it into that match, because any further extension of the
+k-string match will also extend the j-string match. Now, in our
+example, that means ((2,1),3) extends ((1,0),3) so considering just
+((2,1),3) we obtain
+
+ [((1,0),4), ((1,6),3), ((0,3),3)]
+
+The second new 3-string match, ((2,8),3), does not extend any of the
+existing matches, so we simply add it
+
+ [((1,0),4), ((1,6),3), ((0,3),3), ((2,8),3)]
+
+At this point, we know we cannot further grow either of the 3-string
+matches ((1,6),3) or ((0,3),3), because our next position in W2 will
+be 3, and it's impossible to satisfy the conditions of Lemma 1 with
+new 3-string matches at position 3.
+
+In both cases, j=k=3, so we can extend these matches only from positions
+
+ 1+1 = 2    0+1 = 1
+
+and we have already passed those positions.
+
+Therefore, these matches will never grow beyond length 3. Further,
+both matches overlap positions in W2 with ((1,0),4), and so conflict
+with it. For these reasons, we discard these matches, and are left with
+
+ [((1,0),4), ((2,8),3)]
+
+These two matches conflict, but we need to examine position 3 in W2 to
+see if either will be extended in the next round.
+
+Advancing to position 3 in W2, the next 3-string is B A A, which gives
+us a new 3-string match
+
+ ((3,2),3)
+
+This extends ((1,0),4) to ((1,0),5), so we obtain
+
+ [((1,0),5), ((2,8),3)]
+
+We cannot further extend ((2,8),3) when we advance to position 4 in
+W2, and the two matches conflict with one another, so we again discard
+the shorter match and are left with
+
+ [((1,0),5)]
+
+Advancing to position 4 in W2, the next 3-string is A A A. There are
+no matches in W1. This means we can no longer extend the match
+((1,0),5). However, we'll remember it as a possible partial match of
+the strings, pushing it onto a stack
+
+ [ [],
+   [((1,0), 5)] ]
+
+The empty list on the top of the stack is where we'll record new
+matches.
+
+Advancing to position 5 in W2, the next 3-string is A A B, with the
+match
+
+ ((5,3),3)
+
+Now, this conflicts with the existing match ((1,0),5) over positions
+in W1. However, it's possible that there is a matching string longer
+than 5 positions that starts with this match, so we keep it. Our stack
+is now
+
+ [ [((5,3),3)],
+   [((1,0),5)] ]
+
+Advancing to position 6 in W2, the next 3-string is A B B, with the
+matches
+
+ ((6,0),3)  ((6,6), 3)
+
+Neither of these extends ((5,3),3), so we add them to the top-of stack.
+
+ [ [((6,0),3), ((6,6),3), ((5,3),3)],
+   [((1,0),5)] ]
+
+Advancing to position 7 in W2, the next 3-string is B B B, with the
+single match
+
+ ((7,7),3)
+
+This extends the match ((6,6),3) to ((6,6),4), so we obtain
+
+ [ [((6,0),3), ((6,6),4), ((5,3),3)],
+   [((1,0),5)] ]
+
+I have to admit that at this point I'm not sure whether I should have
+discarded the original matches that conflicted with ((1,0),5), and
+perhaps I should organize the data differently. At this point, neither
+
+ ((6,0),3) nor ((5,3),3)
+
+can be further extended, and they both conflict with ((1,0),
+5). However, ((6,6),4) does not overlap with ((1,0),5) in either W2 or
+W1. There are therefore three competing lists of compatible matches:
+
+ [((6,0),3)]
+ [((6,6),4), ((1,0),5)]
+ [((5,3),3)]
+
+Each list is incompatible with the others. It's not clear to me yet
+exactly when we can discard one of these lists. The second one has
+total length 9, so it looks like it's likely to be the winner, but
+when do we know that the others cannot possibly be made longer?
+
+Well, the next position in W2 is 8. W2 is 12 positions long, so the
+longest possible remaining match is positions 8 through 11, a 4-string
+match. Even if the only 4-string match was incompatible with
+
+ [((6,6),4), ((1,0),5)]
+
+this match is already 9 positions long, but the other two matches
+cannot be made more than 3 + 4 = 7 positions long. In fact, it's less
+than that, because the remaining matches cannot overlap either
+
+ ((6,0),3), which extends to position 8, or
+ ((5,3),3), which extends to position 7
+
+So the first can only be made at most 3 positions longer. So at this
+point, we really could drop the shorter matches -- we know they cannot
+win.
+
+Let's generalize this a bit. Two matches
+
+ ((n1,m1),j1) and ((n2,m2),j2)
+
+are *compatible* if either of these conditions is true:
+
+1. they don't overlap in either W1 or W2. Assuming n2 >= n1 and m2 >= m1,
+
+   n1+j1 < n2
+   m1+j1 < m2
+
+2. the second extends the first, which occurs iff
+
+   n1+j1 >= n2 and n2-n1 = m2-m1
+
+In the second case, we can combine the two matches into a longer
+match. So for the rest of this discussion, let's assume we are dealing
+with lists of compatible matches that are incompatible with one
+another.
+
+Given such a list of non-overlapping matches, and let
+
+ ((n,m),j)
+
+be the last match with the largest n and largest m.
+
+Let N1 be the length of W1, and N2 be the length of W2. Given a
+position p > n in W2, what is the maximum total length of additional
+compatible matches?
+
+Obviously, the longest possible compatible match starts at p in W2. If
+p < n+j, then a compatible match would extend ((n,m),j), and so would
+have the form
+
+ ((p, m + (p-n)), jmax)
+
+where
+
+ jmax = max (N2 - p, N1 - (m+(p-n)))
+
+Otherwise, if p >= n+j, then a compatible match could not overlap, and
+so would have to start no earlier than position
+
+ m+j
+
+in W1. Thus the maximum possible length of a compatible match would be
+
+ jmax = max (N2 - p, N1 - (m+j))
+ 
+Therefore, for any list L of compatible, non-overlapping matches, and a
+position p in W2, we can compute the maximum possible length of a
+compatible completion of the list. Call this 'max_completion L'.
+
+For two competing lists of compatible matches L1 and L2, if
+
+ length L1 + max_completion L1 < length L2
+
+then we know there is no point in extending L1: it cannot be made as
+long as L2 is now, let alone longer.
+
+June 17, 2011
+=============
+
+I learned today from a post on Tom Moertel's blog that what I've
+called 'k-strings' above are normally called 'n-grams'.
+
+The stuff above is not quite right yet. I implemented a slight
+variation, and I think it can be fooled. Before proceeding further
+with it, I'm going to try some of the ideas for minimizing spurious
+differences by recognizing some of the lexical structure of the input,
+and keeping comments and white space out of the diff.
+
+I've also discovered that Diff-0.1.2 has no GHC optimizations enabled,
+and that it can be sped up marginally with some simple changes. So
+I'll see how far I can get using Diff for now, and then introduce some
+n-gram based heuristics later if it's necessary.
+
