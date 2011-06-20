@@ -27,9 +27,9 @@ minimizeWhitespaceDiffs oldText newText =
 -- the same order, but as much of the old whitespace as possible.
 minWSDiff :: [WordOrWS] -> [WordOrWS] -> [WordOrWS]
 minWSDiff old new =
-  let diff = {-# SCC "diff" #-}getDiff (toEqWS old) (toEqWS new)
+  let diff = getDiff (toEqWS old) (toEqWS new)
       toEqWS = map EqWS
-      replaceWS diff old new = {-# SCC "replaceWS" #-} replaceWS' [] diff old new
+      replaceWS diff old new = replaceWS' [] diff old new
       replaceWS' sofar diff old new =
         case diff of
           (F, EqWS x):diff' ->
