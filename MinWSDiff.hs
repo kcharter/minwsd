@@ -58,4 +58,15 @@ minWSDiff old new =
       extractLeadingWS [] = error $ "Expected whitespace, but list is empty."
       asString = T.unpack . content
   in replaceWS diff old new
-        
+
+
+-- | A list of pairs of zero-based word positions and lists of
+-- preceding non-words.
+precedingNonWords :: [WordOrWS] -> [(Int, [WordOrWS])]
+precedingNonWords = foldr accum [] . zip [0..]
+  where accum (i,x) sofar
+          | isWord x  = (i,[]):sofar
+          | otherwise = (case sofar of
+                            [] -> []
+                            ((i,nws):rest) -> ((i,x:nws):rest))
+
