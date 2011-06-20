@@ -20,3 +20,7 @@ isWord (WS _) = False
 isWS :: WordOrWS -> Bool
 isWS (Word _) = False
 isWS (WS _) = True
+
+wordText :: WordOrWS -> Maybe T.Text
+wordText (Word t) = Just t
+wordText _ = Nothing
