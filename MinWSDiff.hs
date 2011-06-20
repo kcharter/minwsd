@@ -34,25 +34,19 @@ minWSDiff old new =
         case diff of
           (F, EqWS x):diff' ->
             case x of
-              Word _ -> replaceWS' sofar diff' (dropExactly x old) new
-              WS _   -> replaceWS' (x:sofar) diff' (dropExactly x old) new
+              Word _ -> replaceWS' sofar diff' (tail old) new
+              WS _   -> replaceWS' (x:sofar) diff' (tail old) new
           (S, EqWS x):diff' ->
             -- we preserve both words and white space unique to the
             -- new stream; if it shows up in the diff, it is likely
             -- before a new word
-            replaceWS' (x:sofar) diff' old (dropExactly x new)
+            replaceWS' (x:sofar) diff' old (tail new)
           (B, EqWS x):diff' ->
             case x of
-              Word _ -> replaceWS' (x:sofar) diff' (dropExactly x old) (dropExactly x new)
+              Word _ -> replaceWS' (x:sofar) diff' (tail old) (tail new)
               WS _   -> let (y, old') = extractLeadingWS old
-                        in replaceWS' (y:sofar) diff' old' (dropExactly x new)
+                        in replaceWS' (y:sofar) diff' old' (tail new)
           [] -> reverse $ sofar
-      dropExactly x (y:rest) =
-        if x == y
-        then rest
-        else error $ "Expected '" ++ asString x ++ "', but got '" ++ asString y ++ "'." 
-      dropExactly x [] =
-        error $ "Expected '" ++ asString x ++ "', but list is empty."
       extractLeadingWS (y@(WS _):rest) = (y, rest)
       extractLeadingWS (x:rest) = error $ "Expected whitespace, but got '" ++ asString x ++ "'."
       extractLeadingWS [] = error $ "Expected whitespace, but list is empty."
