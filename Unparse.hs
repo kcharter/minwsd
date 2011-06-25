@@ -9,8 +9,8 @@ import Tokens
 class Unparse a where
   unparse :: a -> String
   
-instance Unparse WordOrWS where
+instance Unparse Token where
   unparse = T.unpack . content
   
-instance Unparse [WordOrWS] where
+instance Unparse [Token] where
   unparse = concatMap unparse

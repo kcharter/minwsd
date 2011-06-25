@@ -16,16 +16,16 @@ main = do
   quickCheck prop_minWSDiffEmptyXIsX
   quickCheck prop_minWSDiffContainsJustNewWords
 
-instance Arbitrary WordOrWS where
+instance Arbitrary Token where
   arbitrary =
     oneof [(Word . T.pack) `fmap` (listOf1 $ arbitrary `suchThat` (not . isSpace)),
            (WS . T.pack) `fmap` (listOf1 $ elements " \t\r\n\f")]
 
-prop_unparseParse :: [WordOrWS] -> Bool
+prop_unparseParse :: [Token] -> Bool
 prop_unparseParse wordsOrWs =
   minimize wordsOrWs == (parse . unparse) wordsOrWs
 
-minimize :: [WordOrWS] -> [WordOrWS]
+minimize :: [Token] -> [Token]
 minimize (w1:w2:rest) =
   case w1 of
     Word t1 ->
@@ -42,17 +42,17 @@ minimize (w1:w2:rest) =
           minimize $ WS (T.append s1 s2):rest
 minimize s = s
 
-prop_minWSDiffXXIsX :: [WordOrWS] -> Bool
+prop_minWSDiffXXIsX :: [Token] -> Bool
 prop_minWSDiffXXIsX wws = wws == minWSDiff wws wws
 
-prop_minWSDiffEmptyXIsX :: [WordOrWS] -> Bool
+prop_minWSDiffEmptyXIsX :: [Token] -> Bool
 prop_minWSDiffEmptyXIsX wws = wws == minWSDiff [] wws
 
-prop_minWSDiffContainsJustNewWords :: [WordOrWS] -> [WordOrWS] -> Bool
+prop_minWSDiffContainsJustNewWords :: [Token] -> [Token] -> Bool
 prop_minWSDiffContainsJustNewWords old new =
   justWords new == justWords (minWSDiff old new)
   
-justWords :: [WordOrWS] -> [WordOrWS]
+justWords :: [Token] -> [Token]
 justWords = filter isWord
   where isWord (Word _) = True
         isWord _ = False

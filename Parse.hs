@@ -5,7 +5,7 @@ import qualified Data.Text as T
 
 import Tokens
 
-parse :: String -> [WordOrWS]
+parse :: String -> [Token]
 parse [] = []
 parse (c:s) =
   let (w, s') =

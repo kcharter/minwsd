@@ -17,7 +17,7 @@ minimizeWhitespaceDiffs oldText newText =
 -- | Given and old stream of words and whitespace, and a new stream of
 -- words and whitespace, produce a new stream with the new words in
 -- the same order, but as much of the old whitespace as possible.
-minWSDiff :: [WordOrWS] -> [WordOrWS] -> [WordOrWS]
+minWSDiff :: [Token] -> [Token] -> [Token]
 minWSDiff old new =
   let diff = getDiff (wordTexts old) (wordTexts new)
       wordTexts = catMaybes . map wordText
@@ -40,7 +40,7 @@ minWSDiff old new =
 -- | A list of lists of non-words. All but the last are the possibly
 -- empty consecutive non-words preceding a word. The last is the
 -- possibly empty sequence of trailing non-words
-nonWordGroups :: [WordOrWS] -> [[WordOrWS]]
+nonWordGroups :: [Token] -> [[Token]]
 nonWordGroups = foldr accum [[]]
   where accum x sofar
           | isWord x  = []:sofar

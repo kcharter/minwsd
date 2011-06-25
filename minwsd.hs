@@ -20,7 +20,7 @@ main = do
   wws2 <- getWordsAndWS f2
   putStr $ unparse $ minWSDiff wws1 wws2
   
-getWordsAndWS :: FilePath -> IO [WordOrWS]
+getWordsAndWS :: FilePath -> IO [Token]
 getWordsAndWS f =
   withFile f ReadMode $ \h -> do
     text <- hGetContents h
