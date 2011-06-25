@@ -1,4 +1,4 @@
-module WordsAndWS where
+module Tokens where
 
 import Control.DeepSeq (NFData(..))
 import qualified Data.Text as T

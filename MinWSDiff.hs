@@ -5,7 +5,7 @@ import Data.Maybe (catMaybes)
 
 import Parse
 import Unparse
-import WordsAndWS
+import Tokens
 
 
 -- | Given an old text and a new text, return a text with the new

@@ -4,7 +4,7 @@ import Data.Char
 import qualified Data.Text as T
 import Test.QuickCheck
 
-import WordsAndWS
+import Tokens
 import Parse
 import Unparse
 import MinWSDiff

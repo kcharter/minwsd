@@ -3,7 +3,7 @@ module Parse where
 import Data.Char
 import qualified Data.Text as T
 
-import WordsAndWS
+import Tokens
 
 parse :: String -> [WordOrWS]
 parse [] = []

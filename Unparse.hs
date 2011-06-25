@@ -4,7 +4,7 @@ module Unparse where
 
 import qualified Data.Text as T
 
-import WordsAndWS
+import Tokens
 
 class Unparse a where
   unparse :: a -> String

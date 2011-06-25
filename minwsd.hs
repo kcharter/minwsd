@@ -9,7 +9,7 @@ import System.IO (withFile, hGetContents, IOMode(..))
 import Parse
 import Unparse
 import MinWSDiff
-import WordsAndWS
+import Tokens
 
 main :: IO ()
 main = do
