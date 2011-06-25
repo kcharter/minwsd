@@ -2,7 +2,6 @@ module MinWSDiff where
 
 import Data.Algorithm.Diff
 import Data.Maybe (catMaybes)
-import qualified Data.Text as T
 
 import Parse
 import Unparse
