@@ -12,14 +12,15 @@ import Tokens
 
 
 -- | Given an old text and a new text, return a text with the new
--- words but whitespace as similar as possible to the old text.
+-- words but whitespace and comments as similar as possible to the old
+-- text.
 minimizeWhitespaceDiffs :: String -> String -> String
 minimizeWhitespaceDiffs oldText newText =
   unparse $ minWSDiff (parse oldText) (parse newText)
 
 -- | Given an old file and a new file, read the files and return
 -- text whose words are the same as in the new file, but whose
--- non-words match the old file as much as possible.
+-- whitespace and comments match the old file as much as possible.
 minimizeFileWhitespaceDiffs :: FilePath -> FilePath -> IO String
 minimizeFileWhitespaceDiffs f1 f2 =
   unparse `liftM` liftM2 minWSDiff (tokenizeFile f1) (tokenizeFile f2)
@@ -33,9 +34,9 @@ tokenizeHandle h = do
   text <- hGetContents h
   let p = parse text in p `deepseq` return p
 
--- | Given and old stream of words and whitespace, and a new stream of
--- words and whitespace, produce a new stream with the new words in
--- the same order, but as much of the old whitespace as possible.
+-- | Given old and new lists of tokens, produce a new list with the
+-- new words, but with as much of the old whitespace and comments as
+-- possible.
 minWSDiff :: [Token] -> [Token] -> [Token]
 minWSDiff old new =
   let diff = getDiff (wordTexts old) (wordTexts new)
