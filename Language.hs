@@ -1,7 +1,6 @@
 module Language where
 
 import Data.Char
-import qualified Data.Text as T
 
 import Tokens
 
@@ -33,13 +32,13 @@ plainTextParse (c:s) =
   let (w, s') =
         if isSpace c
         then let (spaces, s') = span isSpace s
-             in (WS (T.pack (c:spaces)), s')
-        else let (word, s') = break isSpace s
-             in (Word (T.pack (c:word)), s')
+             in (ws (c:spaces), s')
+        else let (nonSpaces, s') = break isSpace s
+             in (word (c:nonSpaces), s')
   in w:plainTextParse s'
 
 -- | Concatentates the contents of all the tokens, and inserts no
 -- other characters. As long as your parser puts distributes all the
 -- characters in the input among tokens, you can use this unparser.
 defaultUnparse :: [Token] -> String
-defaultUnparse = concatMap (T.unpack . content)
+defaultUnparse = concatMap contentString

@@ -17,14 +17,14 @@ main = do
 
 instance Arbitrary Token where
   arbitrary =
-    oneof [(Word . T.pack) `fmap` arbitrary,
-           (WS . T.pack) `fmap` arbitrary,
-           (Comment . T.pack) `fmap` arbitrary]
+    oneof [word `fmap` arbitrary,
+           ws `fmap` arbitrary,
+           comment `fmap` arbitrary]
 
 plainTextTokens :: Gen Token
 plainTextTokens =
-  oneof [(Word . T.pack) `fmap` (listOf1 $ arbitrary `suchThat` (not . isSpace)),
-         (WS . T.pack) `fmap` (listOf1 $ elements " \t\r\n\f")]
+  oneof [word `fmap` (listOf1 $ arbitrary `suchThat` (not . isSpace)),
+         ws `fmap` (listOf1 $ elements " \t\r\n\f")]
   
 prop_plainTextUnparseParse :: [Token] -> Bool
 prop_plainTextUnparseParse wordsOrWs =

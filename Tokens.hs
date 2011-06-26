@@ -15,6 +15,18 @@ instance NFData Token where
   rnf (WS s) = s `seq` ()
   rnf (Comment c) = c `seq` ()
   
+word :: String -> Token
+word = Word . T.pack
+
+ws :: String -> Token
+ws = WS . T.pack
+
+comment :: String -> Token
+comment = Comment . T.pack
+
+contentString :: Token -> String
+contentString = T.unpack . content
+
 isWord :: Token -> Bool
 isWord (Word _) = True
 isWord _ = False
