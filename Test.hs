@@ -54,5 +54,3 @@ prop_minWSDiffContainsJustNewWords old new =
   
 justWords :: [Token] -> [Token]
 justWords = filter isWord
-  where isWord (Word _) = True
-        isWord _ = False
