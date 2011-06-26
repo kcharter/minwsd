@@ -1,7 +1,6 @@
 module Test where
 
 import Data.Char
-import qualified Data.Text as T
 import Test.QuickCheck
 
 import MinWSDiff
@@ -33,27 +32,14 @@ prop_plainTextUnparseParse wordsOrWs =
         unparse = unparser plainText
 
 minimizePlainText :: [Token] -> [Token]
-minimizePlainText (w1:w2:rest) =
-  case w1 of
-    Word t1 ->
-      case w2 of
-        Word t2 ->
-          minimizePlainText (Word (T.append t1 t2):rest)
-        WS _ ->
-          w1:minimizePlainText (w2:rest)
-        Comment _ ->
-          unexpectedComment
-    WS s1 ->
-      case w2 of
-        Word _ ->
-          w1:minimizePlainText (w2:rest)
-        WS s2 ->
-          minimizePlainText $ WS (T.append s1 s2):rest
-        Comment _ ->
-          unexpectedComment
-    Comment _ ->
-      unexpectedComment
-    where unexpectedComment = error "There shouldn't be comments in 'plain text'."
+minimizePlainText (x1:x2:rest)
+  | isWord x1 && isWord x2       = minimizePlainText (word (t1 ++ t2):rest)
+  | isWS x1 && isWS x2           = minimizePlainText (ws (t1 ++ t2):rest)
+  | isComment x1 || isComment x2 = unexpectedComment 
+  | otherwise                    = x1:minimizePlainText (x2:rest)
+    where t1 = contentString x1
+          t2 = contentString x2
+          unexpectedComment = error "There shouldn't be comments in 'plain text'."
 minimizePlainText s = s
 
 prop_minWSDiffXXIsX :: [Token] -> Bool
