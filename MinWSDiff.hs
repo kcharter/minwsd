@@ -1,7 +1,10 @@
-module MinWSDiff where
+module MinWSDiff (minimizeWhitespaceDiffs, minimizeFileWhitespaceDiffs, minWSDiff) where
 
+import Control.DeepSeq (deepseq)
+import Control.Monad (liftM, liftM2)
 import Data.Algorithm.Diff
 import Data.Maybe (catMaybes)
+import System.IO (Handle, withFile, hGetContents, IOMode(..))
 
 import Parse
 import Unparse
@@ -13,7 +16,23 @@ import Tokens
 minimizeWhitespaceDiffs :: String -> String -> String
 minimizeWhitespaceDiffs oldText newText =
   unparse $ minWSDiff (parse oldText) (parse newText)
+
+-- | Given an old file and a new file, read the files and return
+-- text whose words are the same as in the new file, but whose
+-- non-words match the old file as much as possible.
+minimizeFileWhitespaceDiffs :: FilePath -> FilePath -> IO String
+minimizeFileWhitespaceDiffs f1 f2 =
+  unparse `liftM` liftM2 minWSDiff (tokenizeFile f1) (tokenizeFile f2)
+
+tokenizeFile :: FilePath -> IO [Token]
+tokenizeFile f =
+  withFile f ReadMode tokenizeHandle
   
+tokenizeHandle :: Handle -> IO [Token]
+tokenizeHandle h = do
+  text <- hGetContents h
+  let p = parse text in p `deepseq` return p
+
 -- | Given and old stream of words and whitespace, and a new stream of
 -- words and whitespace, produce a new stream with the new words in
 -- the same order, but as much of the old whitespace as possible.
