@@ -13,11 +13,12 @@ data Language = Language {
   unparser :: [Token] -> String
   }
 
--- | Default language support, with the 'plainTextParse' parser and
--- the 'defaultUnparse' unparser. For most programming languages, you
--- can simply replace the parser.
-defaultLanguage :: Language
-defaultLanguage = Language {
+-- | A plain text language, with the 'plainTextParse' parser and the
+-- 'defaultUnparse' unparser. This is a reasonable default language,
+-- since for most programming languages you can simply replace the
+-- parser.
+plainText :: Language
+plainText = Language {
   parser = plainTextParse,
   unparser = defaultUnparse
   }

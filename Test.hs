@@ -29,8 +29,8 @@ plainTextTokens =
 prop_plainTextUnparseParse :: [Token] -> Bool
 prop_plainTextUnparseParse wordsOrWs =
   minimizePlainText wordsOrWs == (parse . unparse) wordsOrWs
-  where parse = parser defaultLanguage
-        unparse = unparser defaultLanguage
+  where parse = parser plainText
+        unparse = unparser plainText
 
 minimizePlainText :: [Token] -> [Token]
 minimizePlainText (w1:w2:rest) =
