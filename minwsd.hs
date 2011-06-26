@@ -16,12 +16,12 @@ main = do
   args <- getArgs
   unless (length args == 2) printUsageAndExit
   let f1:f2:_ = args
-  wws1 <- getWordsAndWS f1
-  wws2 <- getWordsAndWS f2
+  wws1 <- tokenizeFile f1
+  wws2 <- tokenizeFile f2
   putStr $ unparse $ minWSDiff wws1 wws2
   
-getWordsAndWS :: FilePath -> IO [Token]
-getWordsAndWS f =
+tokenizeFile :: FilePath -> IO [Token]
+tokenizeFile f =
   withFile f ReadMode $ \h -> do
     text <- hGetContents h
     let p = parse text in p `deepseq` return p
