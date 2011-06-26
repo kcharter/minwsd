@@ -1,7 +1,7 @@
 module Main where
 
 import Control.DeepSeq (deepseq)
-import Control.Monad (unless)
+import Control.Monad (unless, liftM, liftM2)
 import System.Environment
 import System.Exit
 import System.IO (Handle, withFile, hGetContents, IOMode(..))
@@ -16,10 +16,12 @@ main = do
   args <- getArgs
   unless (length args == 2) printUsageAndExit
   let f1:f2:_ = args
-  wws1 <- tokenizeFile f1
-  wws2 <- tokenizeFile f2
-  putStr $ unparse $ minWSDiff wws1 wws2
+  minimizeFileWhitespaceDiffs f1 f2 >>= putStr
 
+minimizeFileWhitespaceDiffs :: FilePath -> FilePath -> IO String
+minimizeFileWhitespaceDiffs f1 f2 =
+  unparse `liftM` liftM2 minWSDiff (tokenizeFile f1) (tokenizeFile f2)
+  
 tokenizeFile :: FilePath -> IO [Token]
 tokenizeFile f =
   withFile f ReadMode tokenizeHandle
