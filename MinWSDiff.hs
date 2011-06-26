@@ -6,31 +6,34 @@ import Data.Algorithm.Diff
 import Data.Maybe (catMaybes)
 import System.IO (Handle, withFile, hGetContents, IOMode(..))
 
-import Parse
-import Unparse
+import Language
 import Tokens
 
 
 -- | Given an old text and a new text, return a text with the new
 -- words but whitespace and comments as similar as possible to the old
 -- text.
-minimizeWhitespaceDiffs :: String -> String -> String
-minimizeWhitespaceDiffs oldText newText =
+minimizeWhitespaceDiffs :: Language -> String -> String -> String
+minimizeWhitespaceDiffs lang oldText newText =
   unparse $ minWSDiff (parse oldText) (parse newText)
+  where parse   = parser lang
+        unparse = unparser lang
 
 -- | Given an old file and a new file, read the files and return
 -- text whose words are the same as in the new file, but whose
 -- whitespace and comments match the old file as much as possible.
-minimizeFileWhitespaceDiffs :: FilePath -> FilePath -> IO String
-minimizeFileWhitespaceDiffs f1 f2 =
-  unparse `liftM` liftM2 minWSDiff (tokenizeFile f1) (tokenizeFile f2)
+minimizeFileWhitespaceDiffs :: Language -> FilePath -> FilePath -> IO String
+minimizeFileWhitespaceDiffs lang f1 f2 =
+  unparse `liftM` liftM2 minWSDiff (tokenize f1) (tokenize f2)
+  where tokenize = tokenizeFile (parser lang)
+        unparse  = unparser lang
 
-tokenizeFile :: FilePath -> IO [Token]
-tokenizeFile f =
-  withFile f ReadMode tokenizeHandle
+tokenizeFile :: (String -> [Token]) -> FilePath -> IO [Token]
+tokenizeFile parse f =
+  withFile f ReadMode (tokenizeHandle parse)
   
-tokenizeHandle :: Handle -> IO [Token]
-tokenizeHandle h = do
+tokenizeHandle :: (String -> [Token]) -> Handle -> IO [Token]
+tokenizeHandle parse h = do
   text <- hGetContents h
   let p = parse text in p `deepseq` return p
 
