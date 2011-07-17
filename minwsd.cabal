@@ -10,6 +10,7 @@ Executable minwsd
   Build-Depends:  array >= 0.3 && < 0.4,
                   base >= 4 && < 5,
                   deepseq >= 1.1.0.2 && < 2,
+                  regex-tdfa >= 1.1.8 && < 2,
                   text >= 0.11.0.5 && < 2,
                   Diff == 0.1.6
   Main-Is:        minwsd.hs
@@ -22,6 +23,7 @@ Executable minwsd-p
   Build-Depends:  array >= 0.3 && < 0.4,
                   base >= 4 && < 5,
                   deepseq >= 1.1.0.2 && < 2,
+                  regex-tdfa >= 1.1.8 && < 2,
                   text >= 0.11.0.5 && < 2,
                   Diff == 0.1.6
   Main-Is:        minwsd.hs

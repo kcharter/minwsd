@@ -4,6 +4,7 @@ import Control.Monad (unless)
 import System.Environment
 import System.Exit
 
+import C
 import Language
 import MinWSDiff
 
@@ -12,7 +13,7 @@ main = do
   args <- getArgs
   unless (length args == 2) printUsageAndExit
   let f1:f2:_ = args
-  minimizeFileWhitespaceDiffs plainText f1 f2 >>= putStr
+  minimizeFileWhitespaceDiffs cLanguage f1 f2 >>= putStr
 
 printUsageAndExit = do
   progName <- getProgName
