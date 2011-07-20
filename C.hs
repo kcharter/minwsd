@@ -8,7 +8,7 @@ import Data.Char hiding (isPunctuation)
 import Tokens
 import Language
 
-import Text.Regex.TDFA
+import Text.Regex.PCRE
 
 -- | The language definition for C-like languages.
 cLanguage :: Language
