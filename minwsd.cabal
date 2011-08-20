@@ -12,7 +12,7 @@ Executable minwsd
                   deepseq >= 1.1.0.2 && < 2,
                   regex-pcre >= 0.94.2 && < 1,
                   text >= 0.11.0.5 && < 2,
-                  Diff == 0.1.6
+                  Diff == 0.1.3
   Main-Is:        minwsd.hs
   GHC-Options:    -fwarn-incomplete-patterns
                   -fwarn-unused-imports
