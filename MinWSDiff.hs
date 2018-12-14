@@ -2,7 +2,7 @@ module MinWSDiff (minimizeWhitespaceDiffs, minimizeFileWhitespaceDiffs, minWSDif
 
 import Control.DeepSeq (deepseq)
 import Control.Monad (liftM, liftM2)
-import Data.Algorithm.Diff
+import Data.Algorithm.Diff (Diff(..), getDiff)
 import Data.Maybe (catMaybes)
 import System.IO (Handle, withFile, hGetContents, IOMode(..))
 
@@ -31,7 +31,7 @@ minimizeFileWhitespaceDiffs lang f1 f2 =
 tokenizeFile :: (String -> [Token]) -> FilePath -> IO [Token]
 tokenizeFile parse f =
   withFile f ReadMode (tokenizeHandle parse)
-  
+
 tokenizeHandle :: (String -> [Token]) -> Handle -> IO [Token]
 tokenizeHandle parse h = do
   text <- hGetContents h
@@ -47,14 +47,14 @@ minWSDiff old new =
       replaceWS diff oldNWs newNWs = replaceWS' [] diff oldNWs newNWs
       replaceWS' sofar diff oldNWs newNWs =
         case diff of
-          (F, _):diff' ->
+          (First _):diff' ->
             replaceWS' sofar diff' (tail oldNWs) newNWs
-          (S, x):diff' ->
+          (Second x):diff' ->
             -- we preserve both words and white space unique to the
             -- new stream; if it shows up in the diff, it is likely
             -- before a new word
             replaceWS' (Word x:(reverse (head newNWs) ++ sofar)) diff' oldNWs (tail newNWs)
-          (B, x):diff' ->
+          (Both x _):diff' ->
             replaceWS' (Word x:(reverse (head oldNWs) ++ sofar)) diff' (tail oldNWs) (tail newNWs)
           [] -> reverse $ (reverse (head newNWs) ++ sofar)
   in replaceWS diff (nonWordGroups old) (nonWordGroups new)
@@ -68,4 +68,3 @@ nonWordGroups = foldr accum [[]]
   where accum x sofar
           | isWord x  = []:sofar
           | otherwise = (x:head sofar):tail sofar
-
