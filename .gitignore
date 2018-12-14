@@ -2,3 +2,6 @@
 
 # cabal dist directory
 dist
+
+# stack's working directory
+.stack-work
