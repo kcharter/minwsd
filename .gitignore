@@ -5,3 +5,5 @@ dist
 
 # stack's working directory
 .stack-work
+
+tmp
