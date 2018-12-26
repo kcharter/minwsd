@@ -23,3 +23,18 @@ Executable minwsd
                   -funbox-strict-fields
                   -O2
   GHC-Prof-Options: -auto-all -caf-all -rtsopts
+
+test-suite        tests
+  main-is:        Test.hs
+  type:           exitcode-stdio-1.0
+  build-depends:  array >= 0.3 && <= 0.5.2.0,
+                  base >= 4 && <= 6,
+                  deepseq >= 1.1.0.2 && < 2,
+                  regex-pcre >= 0.94.2 && < 1,
+                  text >= 0.11.0.5 && < 2,
+                  Diff == 0.3.4,
+                  QuickCheck >= 2.12 && < 3
+  other-modules:  C,
+                  Language,
+                  MinWSDiff,
+                  Tokens
