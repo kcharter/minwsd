@@ -5,7 +5,6 @@ import System.Environment
 import System.Exit
 
 import C
-import Language
 import MinWSDiff
 
 main :: IO ()
@@ -19,4 +18,3 @@ printUsageAndExit = do
   progName <- getProgName
   putStrLn $ "Usage: " ++ progName ++ " <old file> <new file>"
   exitFailure
-  
