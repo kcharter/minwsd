@@ -25,7 +25,7 @@ Executable minwsd
   GHC-Prof-Options: -auto-all -caf-all -rtsopts
 
 test-suite        tests
-  main-is:        Test.hs
+  main-is:        tests.hs
   type:           exitcode-stdio-1.0
   build-depends:  array >= 0.3 && <= 0.5.2.0,
                   base >= 4 && <= 6,
