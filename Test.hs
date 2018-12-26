@@ -24,7 +24,7 @@ plainTextTokens :: Gen Token
 plainTextTokens =
   oneof [word `fmap` (listOf1 $ arbitrary `suchThat` (not . isSpace)),
          ws `fmap` (listOf1 $ elements " \t\r\n\f")]
-  
+
 prop_plainTextUnparseParse :: [Token] -> Bool
 prop_plainTextUnparseParse wordsOrWs =
   minimizePlainText wordsOrWs == (parse . unparse) wordsOrWs
@@ -35,7 +35,7 @@ minimizePlainText :: [Token] -> [Token]
 minimizePlainText (x1:x2:rest)
   | isWord x1 && isWord x2       = minimizePlainText (word (t1 ++ t2):rest)
   | isWS x1 && isWS x2           = minimizePlainText (ws (t1 ++ t2):rest)
-  | isComment x1 || isComment x2 = unexpectedComment 
+  | isComment x1 || isComment x2 = unexpectedComment
   | otherwise                    = x1:minimizePlainText (x2:rest)
     where t1 = contentString x1
           t2 = contentString x2
@@ -51,6 +51,6 @@ prop_minWSDiffEmptyXIsX wws = wws == minWSDiff [] wws
 prop_minWSDiffContainsJustNewWords :: [Token] -> [Token] -> Bool
 prop_minWSDiffContainsJustNewWords old new =
   justWords new == justWords (minWSDiff old new)
-  
+
 justWords :: [Token] -> [Token]
 justWords = filter isWord
