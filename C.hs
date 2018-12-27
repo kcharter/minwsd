@@ -1,7 +1,7 @@
 -- | Support for parsing to tokens the source text of programs in C
 -- and similar languages.
 
-module C (cLanguage, cParser) where
+module C (cLanguage, cLikeParser, cParser, defaultCommentParser) where
 
 import Data.Char hiding (isPunctuation)
 
@@ -16,13 +16,21 @@ cLanguage = plainText { parser = cParser }
 
 -- | Parser for C-style tokens.
 cParser :: String -> [Token]
-cParser [] = []
-cParser (c:rest)
-  | c == '/'        =
-    case rest of
-      ('/':rest') -> oneLineComment rest'
-      ('*':rest') -> blockComment rest'
-      _           -> oneCharWord c rest
+cParser = cLikeParser defaultCommentParser
+
+-- | Parser for C-style tokens, but with a custom comment parser.
+cLikeParser :: (String -> Maybe (Token, String)) -> String -> [Token]
+cLikeParser _ [] = []
+cLikeParser commentParser s =
+  case (commentParser `alt` nonCommentParser) s of
+    Nothing      -> [] -- TODO: this should probably be an error
+    Just (t, s') -> t:cLikeParser commentParser s'
+
+type Tokenizer = String -> Maybe (Token, String)
+
+nonCommentParser :: Tokenizer
+nonCommentParser [] = Nothing
+nonCommentParser (c:rest)
   | c == '"'        = quoted '"' rest
   | c == '\''       = quoted '\'' rest
   | c == '.'        = afterDot rest
@@ -32,53 +40,69 @@ cParser (c:rest)
   | isIdentStart c  = identifier c rest
   | otherwise       = oneCharWord c rest
 
-oneCharWord :: Char -> String -> [Token]
-oneCharWord c rest = word [c]:cParser rest
+alt :: Tokenizer -> Tokenizer -> Tokenizer
+alt p q s =
+  maybe (q s) Just (p s)
 
-oneLineComment :: String -> [Token]
+oneCharWord :: Char -> Tokenizer
+oneCharWord c rest = Just (word [c], rest)
+
+-- | Parser for C-like comments.
+defaultCommentParser :: String -> Maybe (Token, String)
+defaultCommentParser [] = Nothing
+defaultCommentParser (c:rest)
+  | c == '/'        =
+    case rest of
+      ('/':rest') -> oneLineComment rest'
+      ('*':rest') -> blockComment rest'
+      _           -> oneCharWord c rest
+  | otherwise       =
+    Nothing
+
+oneLineComment :: Tokenizer
 oneLineComment s =
   let (toEOL, rest) = span (not . startsEOL) s
       startsEOL c = c == '\r' || c == '\n'
-  in comment ('/':'/':toEOL):cParser rest
+  in Just (comment ('/':'/':toEOL), rest)
 
-blockComment :: String -> [Token]
+blockComment :: Tokenizer
 blockComment s =
   accum "*/" s
   where accum sofar text =
           case text of
-            '*':'/':rest -> comment (reverse ('/':'*':sofar)):cParser rest
+            '*':'/':rest -> Just (comment (reverse ('/':'*':sofar)), rest)
             '*':c:rest   -> accum ('*':sofar) (c:rest)
             c:rest       -> accum (c:sofar) rest
             []           ->
               -- the comment is terminated by the end of input; this is
               -- obviously garbage, but pretend it's a comment
-              comment (reverse sofar):[]
+              Just (comment (reverse sofar), [])
 
-whiteSpace :: Char -> String -> [Token]
+whiteSpace :: Char -> Tokenizer
 whiteSpace c rest =
   let (spaces, rest') = span isSpace rest
-  in ws (c:spaces):cParser rest'
+  in Just (ws (c:spaces), rest')
 
 isIdentStart :: Char -> Bool
 isIdentStart c = c == '_' || isAlpha c
 
-identifier :: Char -> String -> [Token]
+identifier :: Char -> Tokenizer
 identifier start rest =
-  word (start:identChars):cParser rest'
+  Just (word (start:identChars), rest')
   where (identChars, rest') = span isIdentChar rest
         isIdentChar c = c == '_' || isAlphaNum c
 
-quoted :: Char -> String -> [Token]
+quoted :: Char -> Tokenizer
 quoted q = accum [q]
   where accum sofar (c:rest)
-          | c == q    = word (reverse (q:sofar)):cParser rest
+          | c == q    = Just (word (reverse (q:sofar)), rest)
           | c == '\\' = case rest of
             d:rest' -> accum (d:c:sofar) rest'
-            []      -> word (reverse (c:sofar)):[]
+            []      -> Just (word (reverse (c:sofar)), [])
           | otherwise = accum (c:sofar) rest
-        accum sofar [] = word (reverse sofar):[]
+        accum sofar [] = Just (word (reverse sofar), [])
 
-afterDot :: String -> [Token]
+afterDot :: Tokenizer
 afterDot (c:text)
   | isDigit c =
     -- We could simply put the digit into the regex, but a little
@@ -93,23 +117,23 @@ afterDot (c:text)
         (_,matched,after) = match re text :: (String,String,String)
     in -- since the regex can match the empty string, it never
        -- fails, and 'after' will be 'text' if 'matched' is empty
-     word ('.':c:matched):cParser after
-  | otherwise = word ".":cParser (c:text)
+     Just (word ('.':c:matched), after)
+  | otherwise = Just (word ".", c:text)
 afterDot [] =
-  word ".":[]
+  Just (word ".", [])
 
-afterZero :: String -> [Token]
+afterZero :: Tokenizer
 afterZero text =
   let re = makeRegex "^[Xx]([0-9a-fA-F]+(\\.[0-9a-fA-F]*)?|\\.[0-9a-fA-F]+)([Pp][-+]?[0-9]+)?" :: Regex
       (_,matched,rest) = match re text :: (String,String,String)
   in case matched of
     [] -> afterDigit '0' text
-    _  -> word ('0':matched):cParser rest
+    _  -> Just (word ('0':matched), rest)
 
-afterDigit :: Char -> String -> [Token]
+afterDigit :: Char -> Tokenizer
 afterDigit d text =
   let re = makeRegex "^([0-9]+(\\.[0-9]*)?|\\.[0-9]*)([Ee][-+]?[0-9]+)?" :: Regex
       (_,matched,rest) = match re text :: (String,String,String)
   in case matched of
-    [] -> word [d]:cParser text
-    _  -> word (d:matched):cParser rest
+    [] -> Just (word [d], text)
+    _  -> Just (word (d:matched), rest)
