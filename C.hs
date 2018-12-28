@@ -58,8 +58,8 @@ cCommentParser [] = Nothing
 cCommentParser (c:rest)
   | c == '/'        =
     case rest of
-      ('/':rest') -> oneLineComment "/" rest'
-      ('*':rest') -> blockComment rest'
+      ('/':rest') -> oneLineComment "//" rest'
+      ('*':rest') -> cBlockComment rest'
       _           -> oneCharWord c rest
   | otherwise       =
     Nothing
@@ -77,8 +77,8 @@ oneLineComment start s =
       startsEOL c = c == '\r' || c == '\n'
   in Just (comment (start ++ toEOL), rest)
 
-blockComment :: Tokenizer
-blockComment s =
+cBlockComment :: Tokenizer
+cBlockComment s =
   accum "*/" s
   where accum sofar text =
           case text of
