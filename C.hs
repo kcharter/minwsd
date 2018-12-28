@@ -1,7 +1,12 @@
 -- | Support for parsing to tokens the source text of programs in C
 -- and similar languages.
 
-module C (cLanguage, cLikeParser, cParser, defaultCommentParser) where
+module C (
+  cLanguage,
+  shellLanguage,
+  cLikeParser,
+  defaultCommentParser,
+  shellCommentParser) where
 
 import Data.Char hiding (isPunctuation)
 
@@ -12,11 +17,11 @@ import Text.Regex.PCRE
 
 -- | The language definition for C-like languages.
 cLanguage :: Language
-cLanguage = plainText { parser = cParser }
+cLanguage = plainText { parser = cLikeParser defaultCommentParser}
 
--- | Parser for C-style tokens.
-cParser :: String -> [Token]
-cParser = cLikeParser defaultCommentParser
+-- | The language definition for shell-like languages.
+shellLanguage :: Language
+shellLanguage = plainText { parser = cLikeParser shellCommentParser }
 
 -- | Parser for C-style tokens, but with a custom comment parser.
 cLikeParser :: (String -> Maybe (Token, String)) -> String -> [Token]
@@ -53,17 +58,24 @@ defaultCommentParser [] = Nothing
 defaultCommentParser (c:rest)
   | c == '/'        =
     case rest of
-      ('/':rest') -> oneLineComment rest'
+      ('/':rest') -> oneLineComment "/" rest'
       ('*':rest') -> blockComment rest'
       _           -> oneCharWord c rest
   | otherwise       =
     Nothing
 
-oneLineComment :: Tokenizer
-oneLineComment s =
+-- | Parser for shell-style one-line comments.
+shellCommentParser :: String -> Maybe (Token, String)
+shellCommentParser [] = Nothing
+shellCommentParser (c:rest)
+  | c == '#'  = oneLineComment "#" rest
+  | otherwise = Nothing
+
+oneLineComment :: String -> Tokenizer
+oneLineComment start s =
   let (toEOL, rest) = span (not . startsEOL) s
       startsEOL c = c == '\r' || c == '\n'
-  in Just (comment ('/':'/':toEOL), rest)
+  in Just (comment (start ++ toEOL), rest)
 
 blockComment :: Tokenizer
 blockComment s =
