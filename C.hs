@@ -5,7 +5,7 @@ module C (
   cLanguage,
   shellLanguage,
   cLikeParser,
-  defaultCommentParser,
+  cCommentParser,
   shellCommentParser) where
 
 import Data.Char hiding (isPunctuation)
@@ -17,7 +17,7 @@ import Text.Regex.PCRE
 
 -- | The language definition for C-like languages.
 cLanguage :: Language
-cLanguage = plainText { parser = cLikeParser defaultCommentParser}
+cLanguage = plainText { parser = cLikeParser cCommentParser}
 
 -- | The language definition for shell-like languages.
 shellLanguage :: Language
@@ -53,9 +53,9 @@ oneCharWord :: Char -> Tokenizer
 oneCharWord c rest = Just (word [c], rest)
 
 -- | Parser for C-like comments.
-defaultCommentParser :: String -> Maybe (Token, String)
-defaultCommentParser [] = Nothing
-defaultCommentParser (c:rest)
+cCommentParser :: String -> Maybe (Token, String)
+cCommentParser [] = Nothing
+cCommentParser (c:rest)
   | c == '/'        =
     case rest of
       ('/':rest') -> oneLineComment "/" rest'
