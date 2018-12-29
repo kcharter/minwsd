@@ -8,7 +8,7 @@ import Options.Applicative
 import Data.Semigroup ((<>))
 
 import C
-import Language (Language())
+import Language (alt, Language(), parser, plainText)
 import MinWSDiff
 
 data Options = Options {
@@ -28,12 +28,16 @@ options = Options
   <*> (  argument str (metavar "OLD_FILE"))
   <*> (  argument str (metavar "NEW_FILE"))
 
+puppetLanguage :: Language
+puppetLanguage = plainText { parser = cLikeParser (cCommentParser `alt` shellCommentParser) }
+
 supportedLanguages :: DM.Map String Language
 supportedLanguages =
   DM.fromList [
     ("c", cLanguage),
     ("c++", cLanguage),
     ("java", cLanguage),
+    ("puppet", puppetLanguage),
     ("shell", shellLanguage)
   ]
 
