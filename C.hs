@@ -31,8 +31,6 @@ cLikeParser commentParser s =
     Nothing      -> [] -- TODO: this should probably be an error
     Just (t, s') -> t:cLikeParser commentParser s'
 
-type NextToken = String -> Maybe (Token, String)
-
 nonCommentParser :: NextToken
 nonCommentParser [] = Nothing
 nonCommentParser (c:rest)
@@ -44,10 +42,6 @@ nonCommentParser (c:rest)
   | isSpace c       = whiteSpace c rest
   | isIdentStart c  = identifier c rest
   | otherwise       = oneCharWord c rest
-
-alt :: NextToken -> NextToken -> NextToken
-alt p q s =
-  maybe (q s) Just (p s)
 
 oneCharWord :: Char -> NextToken
 oneCharWord c rest = Just (word [c], rest)

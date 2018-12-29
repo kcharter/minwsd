@@ -42,3 +42,12 @@ plainTextParse (c:s) =
 -- characters in the input among tokens, you can use this unparser.
 defaultUnparse :: [Token] -> String
 defaultUnparse = concatMap contentString
+
+-- | The type of next-token functions, which carve off the next token from the
+-- input, if possible, yielding the token and the remainder of the input.
+type NextToken = String -> Maybe (Token, String)
+
+-- | Combines two next-token functions into one that tries the first and then
+-- the second.
+alt :: NextToken -> NextToken -> NextToken
+alt p q s = maybe (q s) Just (p s)
