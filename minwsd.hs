@@ -1,20 +1,58 @@
 module Main where
 
-import Control.Monad (unless)
-import System.Environment
+import Data.List (intercalate, sort)
+import qualified Data.Map.Strict as DM
 import System.Exit
 
+import Options.Applicative
+import Data.Semigroup ((<>))
+
 import C
+import Language (Language())
 import MinWSDiff
 
-main :: IO ()
-main = do
-  args <- getArgs
-  unless (length args == 2) printUsageAndExit
-  let f1:f2:_ = args
-  minimizeFileWhitespaceDiffs cLanguage f1 f2 >>= putStr
+data Options = Options {
+  language :: String,
+  oldFile :: String,
+  newFile :: String
+}
 
-printUsageAndExit = do
-  progName <- getProgName
-  putStrLn $ "Usage: " ++ progName ++ " <old file> <new file>"
-  exitFailure
+options :: Parser Options
+options = Options
+  <$> strOption
+      (  long "language"
+      <> short 'l'
+      <> value "c"
+      <> metavar "LANGUAGE"
+      <> help "Source language")
+  <*> (  argument str (metavar "OLD_FILE"))
+  <*> (  argument str (metavar "NEW_FILE"))
+
+supportedLanguages :: DM.Map String Language
+supportedLanguages =
+  DM.fromList [
+    ("c", cLanguage),
+    ("shell", shellLanguage)
+  ]
+
+namedLanguage :: String -> Either String Language
+namedLanguage n =
+  maybe (Left noSuchLanguage) (Right) $ DM.lookup n supportedLanguages
+  where noSuchLanguage = "'" ++ n ++ "' isn't supported. Supported languages are " ++ nameSupported
+        nameSupported  = intercalate ", " $ quoteAll $ sort $ DM.keys supportedLanguages
+        quoteAll = map (\s -> "'" ++ s ++ "'")
+
+main :: IO ()
+main = run =<< execParser opts
+  where
+    opts = info (options <**> helper)
+      (  fullDesc
+      <> progDesc "Makes whitespace and comments in NEW_FILE like those in OLD_FILE" )
+
+run :: Options -> IO ()
+run opts =
+  either failWithErrorMsg runWithLanguage (namedLanguage $ language opts)
+  where failWithErrorMsg msg =
+          putStrLn msg >> exitFailure
+        runWithLanguage l =
+          minimizeFileWhitespaceDiffs l (oldFile opts) (newFile opts) >>= putStr

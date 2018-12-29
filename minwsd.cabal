@@ -4,12 +4,14 @@ cabal-version:  >= 1.2
 author:         Kevin Charter
 synopsis:       A program that minimizes whitespace differences between two files.
 build-type:     Simple
-tested-with:    GHC == 7.0.3
+tested-with:    GHC == 8.4.4
 
 Executable minwsd
   Build-Depends:  array >= 0.3 && <= 0.5.2.0,
                   base >= 4 && <= 6,
+                  containers >= 0.5 && < 0.7,
                   deepseq >= 1.1.0.2 && < 2,
+                  optparse-applicative >= 0.14.0.0 && < 0.15,
                   regex-pcre >= 0.94.2 && < 1,
                   text >= 0.11.0.5 && < 2,
                   Diff == 0.3.4
@@ -29,6 +31,7 @@ test-suite        tests
   type:           exitcode-stdio-1.0
   build-depends:  array >= 0.3 && <= 0.5.2.0,
                   base >= 4 && <= 6,
+                  containers >= 0.5 && < 0.7,
                   deepseq >= 1.1.0.2 && < 2,
                   regex-pcre >= 0.94.2 && < 1,
                   text >= 0.11.0.5 && < 2,
