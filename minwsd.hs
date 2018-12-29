@@ -32,6 +32,8 @@ supportedLanguages :: DM.Map String Language
 supportedLanguages =
   DM.fromList [
     ("c", cLanguage),
+    ("c++", cLanguage),
+    ("java", cLanguage),
     ("shell", shellLanguage)
   ]
 
