@@ -31,9 +31,9 @@ cLikeParser commentParser s =
     Nothing      -> [] -- TODO: this should probably be an error
     Just (t, s') -> t:cLikeParser commentParser s'
 
-type Tokenizer = String -> Maybe (Token, String)
+type NextToken = String -> Maybe (Token, String)
 
-nonCommentParser :: Tokenizer
+nonCommentParser :: NextToken
 nonCommentParser [] = Nothing
 nonCommentParser (c:rest)
   | c == '"'        = quoted '"' rest
@@ -45,11 +45,11 @@ nonCommentParser (c:rest)
   | isIdentStart c  = identifier c rest
   | otherwise       = oneCharWord c rest
 
-alt :: Tokenizer -> Tokenizer -> Tokenizer
+alt :: NextToken -> NextToken -> NextToken
 alt p q s =
   maybe (q s) Just (p s)
 
-oneCharWord :: Char -> Tokenizer
+oneCharWord :: Char -> NextToken
 oneCharWord c rest = Just (word [c], rest)
 
 -- | Parser for C-like comments.
@@ -71,13 +71,13 @@ shellCommentParser (c:rest)
   | c == '#'  = oneLineComment "#" rest
   | otherwise = Nothing
 
-oneLineComment :: String -> Tokenizer
+oneLineComment :: String -> NextToken
 oneLineComment start s =
   let (toEOL, rest) = span (not . startsEOL) s
       startsEOL c = c == '\r' || c == '\n'
   in Just (comment (start ++ toEOL), rest)
 
-cBlockComment :: Tokenizer
+cBlockComment :: NextToken
 cBlockComment s =
   accum "*/" s
   where accum sofar text =
@@ -90,7 +90,7 @@ cBlockComment s =
               -- obviously garbage, but pretend it's a comment
               Just (comment (reverse sofar), [])
 
-whiteSpace :: Char -> Tokenizer
+whiteSpace :: Char -> NextToken
 whiteSpace c rest =
   let (spaces, rest') = span isSpace rest
   in Just (ws (c:spaces), rest')
@@ -98,13 +98,13 @@ whiteSpace c rest =
 isIdentStart :: Char -> Bool
 isIdentStart c = c == '_' || isAlpha c
 
-identifier :: Char -> Tokenizer
+identifier :: Char -> NextToken
 identifier start rest =
   Just (word (start:identChars), rest')
   where (identChars, rest') = span isIdentChar rest
         isIdentChar c = c == '_' || isAlphaNum c
 
-quoted :: Char -> Tokenizer
+quoted :: Char -> NextToken
 quoted q = accum [q]
   where accum sofar (c:rest)
           | c == q    = Just (word (reverse (q:sofar)), rest)
@@ -114,7 +114,7 @@ quoted q = accum [q]
           | otherwise = accum (c:sofar) rest
         accum sofar [] = Just (word (reverse sofar), [])
 
-afterDot :: Tokenizer
+afterDot :: NextToken
 afterDot (c:text)
   | isDigit c =
     -- We could simply put the digit into the regex, but a little
@@ -134,7 +134,7 @@ afterDot (c:text)
 afterDot [] =
   Just (word ".", [])
 
-afterZero :: Tokenizer
+afterZero :: NextToken
 afterZero text =
   let re = makeRegex "^[Xx]([0-9a-fA-F]+(\\.[0-9a-fA-F]*)?|\\.[0-9a-fA-F]+)([Pp][-+]?[0-9]+)?" :: Regex
       (_,matched,rest) = match re text :: (String,String,String)
@@ -142,7 +142,7 @@ afterZero text =
     [] -> afterDigit '0' text
     _  -> Just (word ('0':matched), rest)
 
-afterDigit :: Char -> Tokenizer
+afterDigit :: Char -> NextToken
 afterDigit d text =
   let re = makeRegex "^([0-9]+(\\.[0-9]*)?|\\.[0-9]*)([Ee][-+]?[0-9]+)?" :: Regex
       (_,matched,rest) = match re text :: (String,String,String)
