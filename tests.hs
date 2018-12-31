@@ -3,6 +3,7 @@ module Main where
 import Data.Char
 import Test.QuickCheck
 
+import C (cLanguage, shellLanguage)
 import MinWSDiff
 import Language
 import Tokens
@@ -13,6 +14,9 @@ main = do
   quickCheck prop_minWSDiffXXIsX
   quickCheck prop_minWSDiffEmptyXIsX
   quickCheck prop_minWSDiffContainsJustNewWords
+  quickCheck $ gen_prop_parseUnparse plainText
+  quickCheck $ gen_prop_parseUnparse cLanguage
+  quickCheck $ gen_prop_parseUnparse shellLanguage
 
 instance Arbitrary Token where
   arbitrary =
@@ -54,3 +58,7 @@ prop_minWSDiffContainsJustNewWords old new =
 
 justWords :: [Token] -> [Token]
 justWords = filter isWord
+
+gen_prop_parseUnparse :: Language -> String -> Bool
+gen_prop_parseUnparse lang input =
+  input == (unparser lang $ parser lang $ input)

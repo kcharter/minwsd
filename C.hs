@@ -119,7 +119,7 @@ afterDot (c:text)
     -- is a digit after the dot. This makes me think that using
     -- regular expressions (even the regex-tdfa implementation) might
     -- not be such a hot idea.
-    let re = makeRegex "^[0-9]*([Ee][-+]?[0-9]+)?" :: Regex
+    let re = makeTokenRegex "^[0-9]*([Ee][-+]?[0-9]+)?"
         (_,matched,after) = match re text :: (String,String,String)
     in -- since the regex can match the empty string, it never
        -- fails, and 'after' will be 'text' if 'matched' is empty
@@ -130,7 +130,7 @@ afterDot [] =
 
 afterZero :: NextToken
 afterZero text =
-  let re = makeRegex "^[Xx]([0-9a-fA-F]+(\\.[0-9a-fA-F]*)?|\\.[0-9a-fA-F]+)([Pp][-+]?[0-9]+)?" :: Regex
+  let re = makeTokenRegex "^[Xx]([0-9a-fA-F]+(\\.[0-9a-fA-F]*)?|\\.[0-9a-fA-F]+)([Pp][-+]?[0-9]+)?"
       (_,matched,rest) = match re text :: (String,String,String)
   in case matched of
     [] -> afterDigit '0' text
@@ -138,8 +138,11 @@ afterZero text =
 
 afterDigit :: Char -> NextToken
 afterDigit d text =
-  let re = makeRegex "^([0-9]+(\\.[0-9]*)?|\\.[0-9]*)([Ee][-+]?[0-9]+)?" :: Regex
+  let re = makeTokenRegex "^([0-9]+(\\.[0-9]*)?|\\.[0-9]*)([Ee][-+]?[0-9]+)?"
       (_,matched,rest) = match re text :: (String,String,String)
   in case matched of
     [] -> Just (word [d], text)
     _  -> Just (word (d:matched), rest)
+
+makeTokenRegex :: String -> Regex
+makeTokenRegex = makeRegexOpts compFirstLine defaultExecOpt
